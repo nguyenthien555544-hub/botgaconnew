@@ -9,68 +9,59 @@ body{background:#000;color:#00ff66;font-family:monospace}
 .app{max-width:420px;margin:auto;padding:15px;border:2px solid #00ff66;text-align:center}
 input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;border:1px solid #00ff66;color:#00ff66}
 button.sub{border-color:#00aaff;color:#00aaff}
-button.vip{border-color:#ffaa00;color:#ffaa00}
 button.danger{border-color:#ff4444;color:#ff4444}
-.bet{border:2px dashed #00ff66;padding:10px;margin:10px 0;font-size:18px}
+.bet{border:2px dashed #00ff66;padding:10px;margin:10px 0;font-size:20px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .gate{border:1px solid #00ff66;padding:14px;cursor:pointer}
 .gate.sel{background:#003300}
-.stats,.guide,.warn{border:1px dashed #00ff66;padding:8px;margin:10px 0;font-size:13px;text-align:left}
-.warn{color:#ff4444;border-color:#ff4444}
+.stats,.box{border:1px dashed #00ff66;padding:8px;margin:10px 0;font-size:13px;text-align:left}
 canvas{border:1px solid #00ff66;margin-top:10px}
-pre{text-align:left;font-size:13px}
+.big{font-size:20px;font-weight:bold}
+.dim{opacity:.7}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<!-- LOGIN -->
+<!-- ===== TRANG NHẬP KEY ===== -->
 <div id="keyBox">
   <h3>🔑 NHẬP KEY</h3>
   <input id="keyInput" placeholder="Nhập key">
   <button onclick="checkKey()">XÁC NHẬN</button>
-  <button class="sub" onclick="getKey()">GET KEY</button>
+  <button class="sub" onclick="openCreatePage()">➕ TẠO KEY</button>
 
-  <div class="guide">
-<b>📘 CÁCH SỬ DỤNG BOT</b><br>
-• Nhập key để mở BOT<br>
-• 3 ván đầu BOT học dữ liệu<br>
-• Từ ván 4 bắt đầu có % tin cậy<br>
-• BOT chính = cửa ưu tiên<br>
-• BOT phụ = cửa dự phòng<br>
-• Chọn đúng số phòng rồi bấm LƯU
-  </div>
-
-  <div class="warn">
-<b>⚠️ CẢNH BÁO</b><br>
-BOT chỉ mang tính hỗ trợ phân tích.<br>
-Không đảm bảo chính xác 100%.<br>
-Tự chịu trách nhiệm khi sử dụng.
+  <div class="box">
+<b>📘 CÁCH DÙNG BOT</b><br>
+1️⃣ Nhập key để vào tool<br>
+2️⃣ Chọn số phòng → chọn phòng<br>
+3️⃣ Lưu ít nhất 3 ván để bot học<br>
+4️⃣ Sau đó cược theo gợi ý<br><br>
+⚠️ <b>CẢNH BÁO:</b> Bot chỉ hỗ trợ phân tích, KHÔNG chắc thắng 100%
   </div>
 </div>
 
-<!-- ADMIN -->
-<div id="adminBox" style="display:none">
-  <h3>🛠️ ADMIN PANEL</h3>
-  <input id="newKey" placeholder="Key cần tạo">
-  <select id="keyType">
-    <option value="daily">KEY NGÀY</option>
-    <option value="vip">KEY VIP</option>
-  </select>
-  <button onclick="createKey()">➕ TẠO KEY</button>
+<!-- ===== TRANG TẠO KEY ===== -->
+<div id="createPage" style="display:none">
+  <h3>➕ QUẢN LÝ KEY</h3>
 
-  <input id="delKey" placeholder="Key cần xóa">
-  <button class="danger" onclick="deleteKey()">❌ XÓA KEY</button>
+  <input id="newKey" placeholder="Nhập key muốn tạo">
+  <button onclick="createKey()">TẠO KEY</button>
 
-  <button class="vip" onclick="showKeys()">📋 XEM KEY</button>
-  <button class="danger" onclick="logout()">ĐĂNG XUẤT</button>
-  <pre id="adminOut">---</pre>
+  <input id="delKey" placeholder="Nhập key muốn xóa">
+  <button class="danger" onclick="deleteKey()">XÓA KEY</button>
+
+  <button onclick="showKeys()">XEM KEY</button>
+
+  <button class="sub" onclick="backToLogin()">🔑 NHẬP KEY</button>
+
+  <pre id="keyOut">---</pre>
 </div>
 
-<!-- BOT -->
+<!-- ===== BOT TOOL ===== -->
 <div id="botBox" style="display:none">
-  <h3 id="botPick">BOT ĐANG PHÂN TÍCH...</h3>
+  <div id="botMainText" class="big"></div>
+  <div id="botSubText" class="dim"></div>
   <h2 id="betSuggest" class="bet">⏳ CHỜ DỮ LIỆU</h2>
 
   <div class="stats" id="statsBox"></div>
@@ -93,53 +84,51 @@ Tự chịu trách nhiệm khi sử dụng.
 </div>
 
 <script>
-const ADMIN_KEY="ADMINKADZ12!!HT";
 const rooms=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
-
-let data=JSON.parse(localStorage.getItem("gacon_data"))||{
-  rounds:[],win:0,lose:0
-};
-
+let data=JSON.parse(localStorage.getItem("gacon_data"))||{rounds:[],win:0,lose:0};
 let selected=[],botMain="",botSub="";
 
+/* ===== ĐIỀU HƯỚNG TRANG ===== */
+function openCreatePage(){
+  keyBox.style.display="none";
+  createPage.style.display="block";
+}
+function backToLogin(){
+  createPage.style.display="none";
+  keyBox.style.display="block";
+}
+
+/* ===== KEY ===== */
 function checkKey(){
   const k=keyInput.value.trim();
-  if(k===ADMIN_KEY){
-    keyBox.style.display="none";
-    adminBox.style.display="block";return;
-  }
   const keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  if(keys.find(x=>x.key===k&&(x.type==="vip"||Date.now()<x.expire))){
+  if(keys.includes(k)){
     keyBox.style.display="none";
     botBox.style.display="block";
     drawButtons(); analyze();
-  }else alert("KEY KHÔNG HỢP LỆ");
+  } else alert("KEY KHÔNG HỢP LỆ");
 }
-
-function logout(){location.reload();}
-function getKey(){window.open("https://link4m.com/Qy7if","_blank");}
-
 function createKey(){
   let keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  if(keys.some(x=>x.key===newKey.value))return alert("Key tồn tại");
-  keys.push({key:newKey.value,type:keyType.value,
-  expire:keyType.value==="daily"?new Date().setHours(23,59,59,999):null});
+  if(!newKey.value) return;
+  if(keys.includes(newKey.value)) return alert("Key đã tồn tại");
+  keys.push(newKey.value);
   localStorage.setItem("gacon_keys",JSON.stringify(keys));
-  adminOut.innerText="Đã tạo key";
+  keyOut.innerText="✅ Đã tạo key";
 }
-
 function deleteKey(){
   let keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  keys=keys.filter(x=>x.key!==delKey.value);
+  keys=keys.filter(k=>k!==delKey.value);
   localStorage.setItem("gacon_keys",JSON.stringify(keys));
-  adminOut.innerText="Đã xóa key";
+  keyOut.innerText="❌ Đã xóa key";
 }
-
 function showKeys(){
   let keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  adminOut.innerText=keys.map((k,i)=>`${i+1}. ${k.key} | ${k.type}`).join("\n");
+  keyOut.innerText=keys.join("\n")||"Chưa có key";
 }
+function logout(){location.reload();}
 
+/* ===== BOT ===== */
 function drawButtons(){
   gates.innerHTML=""; selected=[];
   const need=Number(killerType.value);
@@ -149,38 +138,33 @@ function drawButtons(){
     d.onclick=()=>{
       if(d.classList.contains("sel")){
         d.classList.remove("sel");
-        selected=selected.filter(x=>x!==r);return;
+        selected=selected.filter(x=>x!==r); return;
       }
-      if(selected.length>=need)return alert("Đã đủ phòng");
+      if(selected.length>=need) return alert("Đã đủ phòng");
       d.classList.add("sel"); selected.push(r);
     };
     gates.appendChild(d);
   });
 }
-
 function analyze(){
+  if(data.rounds.length<3){
+    botMainText.innerText=`🤖 BOT ĐANG HỌC DỮ LIỆU (${data.rounds.length}/3)`;
+    botSubText.innerText="🤖 BOT PHỤ ĐANG HỌC";
+    betSuggest.innerText="⏳ CHỜ ĐỦ 3 VÁN";
+    return;
+  }
   botMain=rooms[Math.floor(Math.random()*rooms.length)];
   do{botSub=rooms[Math.floor(Math.random()*rooms.length)]}while(botSub===botMain);
-  const calc=Math.max(data.rounds.length-3,0);
-  const rate=calc?Math.round((data.win/(data.win+data.lose))*100):0;
+  const rate=Math.round((data.win/(data.win+data.lose))*100);
   const subRate=Math.max(rate-10,0);
-
-  botPick.innerText=
-  `BOT CHÍNH: ${botMain} (${rate}%) | BOT PHỤ: ${botSub} (${subRate}%)`;
-
-  betSuggest.innerText=
-    rate>70?"🔴 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🟢 CƯỢC NHẸ";
-
-  statsBox.innerHTML=
-  `🎯 Tổng trận: ${data.rounds.length}<br>
-   🧠 Ván học: ${Math.min(3,data.rounds.length)}/3<br>
-   ✅ Win: ${data.win} | ❌ Lose: ${data.lose}`;
+  botMainText.innerHTML=`🤖 BOT CHÍNH: <span class="big">${botMain} (${rate}%)</span>`;
+  botSubText.innerText=`🤖 BOT PHỤ: ${botSub} (${subRate}%)`;
+  betSuggest.innerText=rate>70?"🔴 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🟢 CƯỢC NHẸ";
+  statsBox.innerHTML=`🎯 Tổng trận: ${data.rounds.length}<br>✅ Win: ${data.win} | ❌ Lose: ${data.lose}`;
   drawChart();
 }
-
 function saveRound(){
-  if(selected.length!==Number(killerType.value))
-    return alert("Chọn chưa đủ phòng");
+  if(selected.length!==Number(killerType.value)) return alert("Chưa chọn đủ phòng");
   if(data.rounds.length>=3){
     selected.includes(botMain)?data.lose++:data.win++;
   }
@@ -188,7 +172,6 @@ function saveRound(){
   localStorage.setItem("gacon_data",JSON.stringify(data));
   drawButtons(); analyze();
 }
-
 function drawChart(){
   const ctx=chart.getContext("2d");
   ctx.clearRect(0,0,chart.width,chart.height);
@@ -202,9 +185,8 @@ function drawChart(){
     ctx.fillText(r[0],30+i*70,chart.height-5);
   });
 }
-
 function resetAll(){
-  if(confirm("RESET?")){
+  if(confirm("RESET TOÀN BỘ?")){
     localStorage.removeItem("gacon_data");
     location.reload();
   }
