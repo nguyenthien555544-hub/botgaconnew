@@ -165,7 +165,9 @@ function analyze(){
   do{botSub=rooms[Math.floor(Math.random()*rooms.length)]}while(botSub===botMain);
 
   const total=data.win+data.lose;
-  const rate=total?Math.round(data.win/total*100):0;
+  let rate=total?Math.round(data.win/total*100):0;
+  if(rate>95) rate=95; // 🔒 KHÓA KHÔNG BAO GIỜ 100%
+
   const subRate=Math.max(rate-10,0);
 
   let colorClass=rate>70?"green":rate>45?"yellow":"red";
@@ -185,6 +187,8 @@ function analyze(){
 
   drawChart();
 }
+
+
 
 function saveRound(){
   if(selected.length!==Number(killerType.value)) return alert("Chưa chọn đủ phòng");
