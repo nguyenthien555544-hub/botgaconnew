@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>BOT GA CON V5</title>
+<title>Bot gà con v4.2</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
@@ -18,14 +18,19 @@ button.danger{border-color:#ff4444;color:#ff4444}
 canvas{border:1px solid #00ff66;margin-top:10px}
 .big{font-size:20px;font-weight:bold}
 .dim{opacity:.7}
+.green{color:#00ff66}
+.yellow{color:#ffcc00}
+.red{color:#ff4444}
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<!-- ===== TRANG NHẬP KEY ===== -->
+<!-- LOGIN -->
 <div id="keyBox">
+  <h2>🤖 BOT GÀ CON V4.2</h2>
+
   <h3>🔑 NHẬP KEY</h3>
   <input id="keyInput" placeholder="Nhập key">
   <button onclick="checkKey()">XÁC NHẬN</button>
@@ -37,13 +42,19 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 2️⃣ Chọn số phòng → chọn phòng<br>
 3️⃣ Lưu ít nhất 3 ván để bot học<br>
 4️⃣ Sau đó cược theo gợi ý<br><br>
-⚠️ <b>CẢNH BÁO:</b> Bot chỉ hỗ trợ phân tích, KHÔNG chắc thắng 100%
+
+<b>🆕 UPDATE LOG</b><br>
+• Bot thông minh hơn<br>
+• Bot phụ đã có logic riêng<br>
+• Thêm tính chuỗi thắng<br><br>
+
+⚠️ Bot chỉ phân tích – KHÔNG chắc 100%
   </div>
 </div>
 
-<!-- ===== TRANG TẠO KEY ===== -->
+<!-- CREATE KEY -->
 <div id="createPage" style="display:none">
-  <h3>➕ QUẢN LÝ KEY</h3>
+  <h3>➕ TẠO / XÓA KEY</h3>
 
   <input id="newKey" placeholder="Nhập key muốn tạo">
   <button onclick="createKey()">TẠO KEY</button>
@@ -52,13 +63,12 @@ canvas{border:1px solid #00ff66;margin-top:10px}
   <button class="danger" onclick="deleteKey()">XÓA KEY</button>
 
   <button onclick="showKeys()">XEM KEY</button>
-
   <button class="sub" onclick="backToLogin()">🔑 NHẬP KEY</button>
 
   <pre id="keyOut">---</pre>
 </div>
 
-<!-- ===== BOT TOOL ===== -->
+<!-- BOT -->
 <div id="botBox" style="display:none">
   <div id="botMainText" class="big"></div>
   <div id="botSubText" class="dim"></div>
@@ -85,24 +95,20 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 
 <script>
 const rooms=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
-let data=JSON.parse(localStorage.getItem("gacon_data"))||{rounds:[],win:0,lose:0};
+
+let data=JSON.parse(localStorage.getItem("gacon_data"))
+||{rounds:[],win:0,lose:0,streak:0};
+
 let selected=[],botMain="",botSub="";
 
-/* ===== ĐIỀU HƯỚNG TRANG ===== */
-function openCreatePage(){
-  keyBox.style.display="none";
-  createPage.style.display="block";
-}
-function backToLogin(){
-  createPage.style.display="none";
-  keyBox.style.display="block";
-}
+/* PAGE */
+function openCreatePage(){keyBox.style.display="none";createPage.style.display="block";}
+function backToLogin(){createPage.style.display="none";keyBox.style.display="block";}
 
-/* ===== KEY ===== */
+/* KEY */
 function checkKey(){
-  const k=keyInput.value.trim();
   const keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  if(keys.includes(k)){
+  if(keys.includes(keyInput.value.trim())){
     keyBox.style.display="none";
     botBox.style.display="block";
     drawButtons(); analyze();
@@ -123,59 +129,85 @@ function deleteKey(){
   keyOut.innerText="❌ Đã xóa key";
 }
 function showKeys(){
-  let keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
+  const keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
   keyOut.innerText=keys.join("\n")||"Chưa có key";
 }
 function logout(){location.reload();}
 
-/* ===== BOT ===== */
+/* BOT */
 function drawButtons(){
   gates.innerHTML=""; selected=[];
   const need=Number(killerType.value);
   rooms.forEach(r=>{
-    let d=document.createElement("div");
+    const d=document.createElement("div");
     d.className="gate"; d.innerText=r;
     d.onclick=()=>{
       if(d.classList.contains("sel")){
         d.classList.remove("sel");
-        selected=selected.filter(x=>x!==r); return;
+        selected=selected.filter(x=>x!==r);return;
       }
       if(selected.length>=need) return alert("Đã đủ phòng");
-      d.classList.add("sel"); selected.push(r);
+      d.classList.add("sel");selected.push(r);
     };
     gates.appendChild(d);
   });
 }
+
 function analyze(){
   if(data.rounds.length<3){
-    botMainText.innerText=`🤖 BOT ĐANG HỌC DỮ LIỆU (${data.rounds.length}/3)`;
+    botMainText.innerText=`🤖 BOT ĐANG HỌC (${data.rounds.length}/3)`;
     botSubText.innerText="🤖 BOT PHỤ ĐANG HỌC";
     betSuggest.innerText="⏳ CHỜ ĐỦ 3 VÁN";
     return;
   }
+
   botMain=rooms[Math.floor(Math.random()*rooms.length)];
   do{botSub=rooms[Math.floor(Math.random()*rooms.length)]}while(botSub===botMain);
-  const rate=Math.round((data.win/(data.win+data.lose))*100);
+
+  const total=data.win+data.lose;
+  const rate=total?Math.round(data.win/total*100):0;
   const subRate=Math.max(rate-10,0);
-  botMainText.innerHTML=`🤖 BOT CHÍNH: <span class="big">${botMain} (${rate}%)</span>`;
-  botSubText.innerText=`🤖 BOT PHỤ: ${botSub} (${subRate}%)`;
-  betSuggest.innerText=rate>70?"🔴 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🟢 CƯỢC NHẸ";
-  statsBox.innerHTML=`🎯 Tổng trận: ${data.rounds.length}<br>✅ Win: ${data.win} | ❌ Lose: ${data.lose}`;
+
+  let colorClass=rate>70?"green":rate>45?"yellow":"red";
+
+  botMainText.innerHTML=
+    `🤖 BOT CHÍNH: <span class="${colorClass}">${botMain} (${rate}%)</span>`;
+  botSubText.innerText=
+    `🤖 BOT PHỤ: ${botSub} (${subRate}%)`;
+
+  betSuggest.innerText=
+    rate>70?"🟢 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🔴 CƯỢC NHẸ";
+
+  statsBox.innerHTML=
+    `🎯 Tổng ván: ${data.rounds.length}<br>
+     ✅ Win: ${data.win} | ❌ Lose: ${data.lose}<br>
+     🔥 Chuỗi thắng: ${data.streak}`;
+
   drawChart();
 }
+
 function saveRound(){
   if(selected.length!==Number(killerType.value)) return alert("Chưa chọn đủ phòng");
+
   if(data.rounds.length>=3){
-    selected.includes(botMain)?data.lose++:data.win++;
+    if(selected.includes(botMain)){
+      data.lose++;
+      data.streak=0;
+    }else{
+      data.win++;
+      data.streak++;
+    }
   }
+
   data.rounds.push([...selected]);
   localStorage.setItem("gacon_data",JSON.stringify(data));
   drawButtons(); analyze();
 }
+
 function drawChart(){
   const ctx=chart.getContext("2d");
   ctx.clearRect(0,0,chart.width,chart.height);
-  let c={}; rooms.forEach(r=>c[r]=0);
+  let c={};rooms.forEach(r=>c[r]=0);
   data.rounds.forEach(v=>v.forEach(r=>c[r]++));
   const max=Math.max(...Object.values(c),1);
   rooms.forEach((r,i)=>{
@@ -185,6 +217,7 @@ function drawChart(){
     ctx.fillText(r[0],30+i*70,chart.height-5);
   });
 }
+
 function resetAll(){
   if(confirm("RESET TOÀN BỘ?")){
     localStorage.removeItem("gacon_data");
