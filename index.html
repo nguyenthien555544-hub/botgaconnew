@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Bot gà con v4.2</title>
+<title>Bot gà con v4.3</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
@@ -29,7 +29,7 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 
 <!-- LOGIN -->
 <div id="keyBox">
-  <h2>🤖 BOT GÀ CON V4.2</h2>
+  <h2>🤖 BOT GÀ CON V4.3</h2>
 
   <h3>🔑 NHẬP KEY</h3>
   <input id="keyInput" placeholder="Nhập key">
@@ -43,10 +43,9 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 3️⃣ Lưu ít nhất 3 ván để bot học<br>
 4️⃣ Sau đó cược theo gợi ý<br><br>
 
-<b>🆕 UPDATE LOG</b><br>
-• Bot thông minh hơn<br>
-• Bot phụ đã có logic riêng<br>
-• Thêm tính chuỗi thắng<br><br>
+<b>🆕 UPDATE V4.3</b><br>
++ Thêm lịch sử win lose 5 ván<br>
++ Thêm chống spam ván để người chơi không spam dẫn đến số liệu ảo<br><br>
 
 ⚠️ Bot chỉ phân tích – KHÔNG chắc 100%
   </div>
@@ -96,8 +95,14 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <script>
 const rooms=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
 
-let data=JSON.parse(localStorage.getItem("gacon_data"))
-||{rounds:[],win:0,lose:0,streak:0};
+let data=JSON.parse(localStorage.getItem("gacon_data"))||{
+  rounds:[],
+  win:0,
+  lose:0,
+  streak:0,
+  history:[],
+  lastSave:0
+};
 
 let selected=[],botMain="",botSub="";
 
@@ -166,44 +171,47 @@ function analyze(){
 
   const total=data.win+data.lose;
   let rate=total?Math.round(data.win/total*100):0;
-  if(rate>95) rate=95; // 🔒 KHÓA KHÔNG BAO GIỜ 100%
+  if(rate>95) rate=95;
 
-  const subRate=Math.max(rate-10,0);
+  const colorClass=rate>70?"green":rate>45?"yellow":"red";
 
-  let colorClass=rate>70?"green":rate>45?"yellow":"red";
+  botMainText.innerHTML=`🤖 BOT CHÍNH: <span class="${colorClass}">${botMain} (${rate}%)</span>`;
+  botSubText.innerText=`🤖 BOT PHỤ: ${botSub} (${Math.max(rate-10,0)}%)`;
 
-  botMainText.innerHTML=
-    `🤖 BOT CHÍNH: <span class="${colorClass}">${botMain} (${rate}%)</span>`;
-  botSubText.innerText=
-    `🤖 BOT PHỤ: ${botSub} (${subRate}%)`;
+  betSuggest.innerText=rate>70?"🟢 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🔴 CƯỢC NHẸ";
 
-  betSuggest.innerText=
-    rate>70?"🟢 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🔴 CƯỢC NHẸ";
+  const historyText=data.history.slice(-5).map(x=>x==="W"?"✔️":"❌").join(" ");
 
   statsBox.innerHTML=
     `🎯 Tổng ván: ${data.rounds.length}<br>
      ✅ Win: ${data.win} | ❌ Lose: ${data.lose}<br>
-     🔥 Chuỗi thắng: ${data.streak}`;
+     🔥 Chuỗi thắng: ${data.streak}<br>
+     🕘 5 ván gần nhất: ${historyText}`;
 
   drawChart();
 }
 
-
-
 function saveRound(){
+  const now=Date.now();
+  if(now-data.lastSave<5000) return alert("⏱️ Vui lòng chờ 5 giây để lưu ván tiếp theo");
+
   if(selected.length!==Number(killerType.value)) return alert("Chưa chọn đủ phòng");
 
+  let result="W";
   if(data.rounds.length>=3){
     if(selected.includes(botMain)){
-      data.lose++;
-      data.streak=0;
+      data.lose++;data.streak=0;result="L";
     }else{
-      data.win++;
-      data.streak++;
+      data.win++;data.streak++;result="W";
     }
   }
 
+  data.history.push(result);
+  if(data.history.length>5) data.history.shift();
+
   data.rounds.push([...selected]);
+  data.lastSave=now;
+
   localStorage.setItem("gacon_data",JSON.stringify(data));
   drawButtons(); analyze();
 }
