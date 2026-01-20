@@ -2,25 +2,28 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Bot gà con v4.3</title>
+<title>BOT GÀ CON 4.6 FIX</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
-.app{max-width:420px;margin:auto;padding:15px;border:2px solid #00ff66;text-align:center}
-input,select,button{width:100%;padding:10px;margin:6px 0;background:#000;border:1px solid #00ff66;color:#00ff66}
-button.sub{border-color:#00aaff;color:#00aaff}
+.app{max-width:420px;margin:auto;padding:15px;border:2px solid #00ff66}
+input,button,select{width:100%;padding:10px;margin:6px 0;background:#000;border:1px solid #00ff66;color:#00ff66}
 button.danger{border-color:#ff4444;color:#ff4444}
-.bet{border:2px dashed #00ff66;padding:10px;margin:10px 0;font-size:20px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
-.gate{border:1px solid #00ff66;padding:14px;cursor:pointer}
+button.sub{border-color:#00aaff;color:#00aaff}
+.box,.stats,.log{border:1px dashed #00ff66;padding:8px;margin:10px 0;font-size:13px}
+.bet{border:2px dashed #00ff66;padding:10px;font-size:18px;text-align:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gate{border:1px solid #00ff66;padding:14px;text-align:center}
 .gate.sel{background:#003300}
-.stats,.box{border:1px dashed #00ff66;padding:8px;margin:10px 0;font-size:13px;text-align:left}
 canvas{border:1px solid #00ff66;margin-top:10px}
-.big{font-size:20px;font-weight:bold}
-.dim{opacity:.7}
-.green{color:#00ff66}
-.yellow{color:#ffcc00}
-.red{color:#ff4444}
+.big{text-align:center;font-size:20px}
+
+/* popup */
+.modal{
+position:fixed;inset:0;background:rgba(0,0,0,.8);
+display:none;align-items:center;justify-content:center;z-index:9}
+.modalBox{
+border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </style>
 </head>
 
@@ -28,213 +31,208 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <div class="app">
 
 <!-- LOGIN -->
-<div id="keyBox">
-  <h2>🤖 BOT GÀ CON V4.3</h2>
+<div id="login">
+<h2 class="big">🤖 BOT GÀ CON 4.6</h2>
+<input id="keyInput" placeholder="Nhập key">
+<button onclick="checkKey()">XÁC NHẬN</button>
+<button class="sub" onclick="openKey()">➕ TẠO / XÓA KEY</button>
 
-  <h3>🔑 NHẬP KEY</h3>
-  <input id="keyInput" placeholder="Nhập key">
-  <button onclick="checkKey()">XÁC NHẬN</button>
-  <button class="sub" onclick="openCreatePage()">➕ TẠO KEY</button>
-
-  <div class="box">
-<b>📘 CÁCH DÙNG BOT</b><br>
-1️⃣ Nhập key để vào tool<br>
-2️⃣ Chọn số phòng → chọn phòng<br>
-3️⃣ Lưu ít nhất 3 ván để bot học<br>
-4️⃣ Sau đó cược theo gợi ý<br><br>
-
-<b>🆕 UPDATE V4.3</b><br>
-+ Thêm lịch sử win lose 5 ván<br>
-+ Thêm chống spam ván để người chơi không spam dẫn đến số liệu ảo<br><br>
-
-⚠️ Bot chỉ phân tích – KHÔNG chắc 100%
-  </div>
+<div class="box">
+<b>UPDATE 4.6</b><br>
++ Chuỗi win / thua<br>
++ Biểu đồ % phòng<br>
++ Bot phụ né phòng nguy hiểm<br>
+</div>
 </div>
 
-<!-- CREATE KEY -->
-<div id="createPage" style="display:none">
-  <h3>➕ TẠO / XÓA KEY</h3>
-
-  <input id="newKey" placeholder="Nhập key muốn tạo">
-  <button onclick="createKey()">TẠO KEY</button>
-
-  <input id="delKey" placeholder="Nhập key muốn xóa">
-  <button class="danger" onclick="deleteKey()">XÓA KEY</button>
-
-  <button onclick="showKeys()">XEM KEY</button>
-  <button class="sub" onclick="backToLogin()">🔑 NHẬP KEY</button>
-
-  <pre id="keyOut">---</pre>
+<!-- KEY -->
+<div id="keyBox" style="display:none">
+<input id="newKey" placeholder="Key mới">
+<button onclick="createKey()">TẠO KEY</button>
+<input id="delKey" placeholder="Key cần xóa">
+<button class="danger" onclick="deleteKey()">XÓA KEY</button>
+<button onclick="backLogin()">⬅ QUAY LẠI</button>
+<pre id="keyList"></pre>
 </div>
 
 <!-- BOT -->
-<div id="botBox" style="display:none">
-  <div id="botMainText" class="big"></div>
-  <div id="botSubText" class="dim"></div>
-  <h2 id="betSuggest" class="bet">⏳ CHỜ DỮ LIỆU</h2>
+<div id="bot" style="display:none">
+<div id="botMain" class="big"></div>
+<div id="botSub" class="big"></div>
+<div id="betSuggest" class="bet"></div>
 
-  <div class="stats" id="statsBox"></div>
+<div class="stats" id="stats"></div>
 
-  <select id="killerType" onchange="drawButtons()">
-    <option value="1">🐔 Gà (1 phòng)</option>
-    <option value="2">🐍 Cặp rắn (2 phòng)</option>
-    <option value="4">⚡ Thần sấm (4 phòng)</option>
-  </select>
+<select id="killer">
+<option value="1">🐔 Gà</option>
+<option value="2">🐍 Rắn</option>
+<option value="4">⚡ Thần sấm</option>
+</select>
 
-  <div id="gates" class="grid"></div>
+<div class="grid" id="rooms"></div>
 
-  <button onclick="saveRound()">LƯU VÒNG</button>
-  <button class="danger" onclick="resetAll()">RESET</button>
-  <button class="sub" onclick="logout()">ĐỔI KEY</button>
+<button onclick="saveRound()">LƯU VÁN</button>
+<button class="danger" onclick="openReset()">RESET</button>
+<button class="sub" onclick="logout()">ĐĂNG XUẤT</button>
 
-  <canvas id="chart" width="360" height="180"></canvas>
+<canvas id="chart" width="360" height="180"></canvas>
+
+<div class="log" id="logBox"><b>📜 NHẬT KÝ BOT</b></div>
+</div>
 </div>
 
+<!-- RESET MODAL -->
+<div class="modal" id="resetModal">
+<div class="modalBox">
+<p>Bạn chắc chắn muốn reset?</p>
+<button onclick="confirmReset()">OK</button>
+<button class="danger" onclick="closeReset()">KHÔNG</button>
+</div>
 </div>
 
 <script>
-const rooms=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
+/* CONFIG */
+const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
+const MAX_MAIN=94.32;
 
-let data=JSON.parse(localStorage.getItem("gacon_data"))||{
-  rounds:[],
-  win:0,
-  lose:0,
-  streak:0,
-  history:[],
-  lastSave:0
+/* DATA */
+let data=JSON.parse(localStorage.getItem("gacon46"))||{
+rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[]
 };
+let selected=[],botPick="";
 
-let selected=[],botMain="",botSub="";
-
-/* PAGE */
-function openCreatePage(){keyBox.style.display="none";createPage.style.display="block";}
-function backToLogin(){createPage.style.display="none";keyBox.style.display="block";}
+/* ROOM HISTORY */
+let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
+ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0,lastPick:0});
 
 /* KEY */
 function checkKey(){
-  const keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  if(keys.includes(keyInput.value.trim())){
-    keyBox.style.display="none";
-    botBox.style.display="block";
-    drawButtons(); analyze();
-  } else alert("KEY KHÔNG HỢP LỆ");
+let k=JSON.parse(localStorage.getItem("keys")||"[]");
+if(k.includes(keyInput.value)){
+login.style.display="none";bot.style.display="block";
+drawRooms();analyze();
+}else alert("Key sai");
 }
+function openKey(){login.style.display="none";keyBox.style.display="block";showKeys()}
+function backLogin(){keyBox.style.display="none";login.style.display="block"}
+function logout(){location.reload()}
 function createKey(){
-  let keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  if(!newKey.value) return;
-  if(keys.includes(newKey.value)) return alert("Key đã tồn tại");
-  keys.push(newKey.value);
-  localStorage.setItem("gacon_keys",JSON.stringify(keys));
-  keyOut.innerText="✅ Đã tạo key";
-}
+let k=JSON.parse(localStorage.getItem("keys")||"[]");
+if(newKey.value&&!k.includes(newKey.value)){
+k.push(newKey.value);localStorage.setItem("keys",JSON.stringify(k));
+showKeys();}}
 function deleteKey(){
-  let keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  keys=keys.filter(k=>k!==delKey.value);
-  localStorage.setItem("gacon_keys",JSON.stringify(keys));
-  keyOut.innerText="❌ Đã xóa key";
-}
+let k=JSON.parse(localStorage.getItem("keys")||"[]");
+k=k.filter(x=>x!==delKey.value);
+localStorage.setItem("keys",JSON.stringify(k));
+showKeys();}
 function showKeys(){
-  const keys=JSON.parse(localStorage.getItem("gacon_keys")||"[]");
-  keyOut.innerText=keys.join("\n")||"Chưa có key";
-}
-function logout(){location.reload();}
+keyList.innerText=(JSON.parse(localStorage.getItem("keys")||"[]")).join("\n")||"Chưa có key";}
 
 /* BOT */
-function drawButtons(){
-  gates.innerHTML=""; selected=[];
-  const need=Number(killerType.value);
-  rooms.forEach(r=>{
-    const d=document.createElement("div");
-    d.className="gate"; d.innerText=r;
-    d.onclick=()=>{
-      if(d.classList.contains("sel")){
-        d.classList.remove("sel");
-        selected=selected.filter(x=>x!==r);return;
-      }
-      if(selected.length>=need) return alert("Đã đủ phòng");
-      d.classList.add("sel");selected.push(r);
-    };
-    gates.appendChild(d);
-  });
+function drawRooms(){
+rooms.innerHTML="";selected=[];
+ROOMS.forEach(r=>{
+let d=document.createElement("div");
+d.className="gate";d.innerText=r;
+d.onclick=()=>{
+if(d.classList.contains("sel")){
+d.classList.remove("sel");selected=selected.filter(x=>x!==r);return;}
+if(selected.length>=killer.value)return;
+d.classList.add("sel");selected.push(r);
+};
+rooms.appendChild(d);
+});
+}
+
+function botPhuPick(main){
+let c=ROOMS.filter(r=>r!==main);
+let pick=c[Math.floor(Math.random()*c.length)];
+let h=roomHistory[pick];
+let trust=Math.max(25,Math.min(84.32,60+(h.win-h.lose)*2-h.loseStreak*8));
+return {room:pick,trust:trust.toFixed(2)};
 }
 
 function analyze(){
-  if(data.rounds.length<3){
-    botMainText.innerText=`🤖 BOT ĐANG HỌC (${data.rounds.length}/3)`;
-    botSubText.innerText="🤖 BOT PHỤ ĐANG HỌC";
-    betSuggest.innerText="⏳ CHỜ ĐỦ 3 VÁN";
-    return;
-  }
+if(data.rounds.length<3){
+botMain.innerText="🤖 BOT ĐANG HỌC";
+betSuggest.innerText="3 VÁN ĐẦU KHÔNG TÍNH";
+return;
+}
+if(data.loseStreak>=4){
+betSuggest.innerText="⛔ BOT NGHỈ";
+return;
+}
 
-  botMain=rooms[Math.floor(Math.random()*rooms.length)];
-  do{botSub=rooms[Math.floor(Math.random()*rooms.length)]}while(botSub===botMain);
+botPick=ROOMS[Math.floor(Math.random()*ROOMS.length)];
+let sub=botPhuPick(botPick);
 
-  const total=data.win+data.lose;
-  let rate=total?Math.round(data.win/total*100):0;
-  if(rate>95) rate=95;
+let rate=Math.min(MAX_MAIN,Math.round(data.win/(data.win+data.lose)*100||0));
+let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
 
-  const colorClass=rate>70?"green":rate>45?"yellow":"red";
+botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
+botSub.innerText=`BOT PHỤ NÉ: ${sub.room} (${sub.trust}%)`;
+betSuggest.innerText=bet;
 
-  botMainText.innerHTML=`🤖 BOT CHÍNH: <span class="${colorClass}">${botMain} (${rate}%)</span>`;
-  botSubText.innerText=`🤖 BOT PHỤ: ${botSub} (${Math.max(rate-10,0)}%)`;
+stats.innerHTML=
+`🎯 Ván: ${data.rounds.length}<br>
+Win: ${data.win} | Lose: ${data.lose}<br>
+Chuỗi win: ${data.winStreak}<br>
+Chuỗi thua: ${data.loseStreak}`;
 
-  betSuggest.innerText=rate>70?"🟢 CƯỢC MẠNH":rate>45?"🟡 CƯỢC VỪA":"🔴 CƯỢC NHẸ";
-
-  const historyText=data.history.slice(-5).map(x=>x==="W"?"✔️":"❌").join(" ");
-
-  statsBox.innerHTML=
-    `🎯 Tổng ván: ${data.rounds.length}<br>
-     ✅ Win: ${data.win} | ❌ Lose: ${data.lose}<br>
-     🔥 Chuỗi thắng: ${data.streak}<br>
-     🕘 5 ván gần nhất: ${historyText}`;
-
-  drawChart();
+drawChart();
 }
 
 function saveRound(){
-  const now=Date.now();
-  if(now-data.lastSave<5000) return alert("⏱️ Vui lòng chờ 5 giây để lưu ván tiếp theo");
+if(Date.now()-data.last<5000)return alert("Chống spam");
+if(selected.length!=killer.value)return;
 
-  if(selected.length!==Number(killerType.value)) return alert("Chưa chọn đủ phòng");
-
-  let result="W";
-  if(data.rounds.length>=3){
-    if(selected.includes(botMain)){
-      data.lose++;data.streak=0;result="L";
-    }else{
-      data.win++;data.streak++;result="W";
-    }
-  }
-
-  data.history.push(result);
-  if(data.history.length>5) data.history.shift();
-
-  data.rounds.push([...selected]);
-  data.lastSave=now;
-
-  localStorage.setItem("gacon_data",JSON.stringify(data));
-  drawButtons(); analyze();
+let result="WIN";
+if(data.rounds.length>=3){
+if(selected.includes(botPick)){
+data.lose++;data.loseStreak++;data.winStreak=0;
+result="LOSE";
+}else{
+data.win++;data.winStreak++;data.loseStreak=0;
+}
 }
 
+data.rounds.push([...selected]);
+data.last=Date.now();
+data.log.push(`${result} | Bot: ${botPick} | Giết: ${selected.join(", ")}`);
+if(data.log.length>6)data.log.shift();
+localStorage.setItem("gacon46",JSON.stringify(data));
+logBox.innerHTML="<b>📜 NHẬT KÝ BOT</b><br>"+data.log.join("<br>");
+drawRooms();analyze();
+}
+
+/* CHART */
 function drawChart(){
-  const ctx=chart.getContext("2d");
-  ctx.clearRect(0,0,chart.width,chart.height);
-  let c={};rooms.forEach(r=>c[r]=0);
-  data.rounds.forEach(v=>v.forEach(r=>c[r]++));
-  const max=Math.max(...Object.values(c),1);
-  rooms.forEach((r,i)=>{
-    const h=(c[r]/max)*(chart.height-30);
-    ctx.fillStyle="#00ff66";
-    ctx.fillRect(10+i*70,chart.height-h-20,50,h);
-    ctx.fillText(r[0],30+i*70,chart.height-5);
-  });
+let ctx=chart.getContext("2d");
+ctx.clearRect(0,0,360,180);
+let count={};ROOMS.forEach(r=>count[r]=0);
+data.rounds.flat().forEach(r=>count[r]++);
+let max=Math.max(...Object.values(count),1);
+
+ROOMS.forEach((r,i)=>{
+let h=(count[r]/max)*120;
+let pct=Math.round(count[r]/data.rounds.length*100||0);
+ctx.fillStyle="#00ff66";
+ctx.fillRect(20+i*65,160-h,40,h);
+ctx.fillText(pct+"%",25+i*65,150-h);
+ctx.fillText(r[0],35+i*65,170);
+});
 }
 
-function resetAll(){
-  if(confirm("RESET TOÀN BỘ?")){
-    localStorage.removeItem("gacon_data");
-    location.reload();
-  }
+/* RESET */
+function openReset(){resetModal.style.display="flex"}
+function closeReset(){resetModal.style.display="none"}
+function confirmReset(){
+localStorage.removeItem("gacon46");
+localStorage.removeItem("roomHistory");
+resetModal.style.display="none";
+alert("✅ Đã reset dữ liệu bot");
+location.reload();
 }
 </script>
 </body>
