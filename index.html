@@ -17,13 +17,8 @@ button.sub{border-color:#00aaff;color:#00aaff}
 .gate.sel{background:#003300}
 canvas{border:1px solid #00ff66;margin-top:10px}
 .big{text-align:center;font-size:20px}
-
-/* popup */
-.modal{
-position:fixed;inset:0;background:rgba(0,0,0,.8);
-display:none;align-items:center;justify-content:center;z-index:9}
-.modalBox{
-border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:9}
+.modalBox{border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </style>
 </head>
 
@@ -35,8 +30,6 @@ border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 <h2 class="big">🤖 BOT GÀ CON 4.6</h2>
 <input id="keyInput" placeholder="Nhập key">
 <button onclick="checkKey()">XÁC NHẬN</button>
-<button class="sub" onclick="openKey()">➕ TẠO / XÓA KEY</button>
-
 <div class="box">
 <b>UPDATE 4.6</b><br>
 + Chuỗi win / thua<br>
@@ -45,22 +38,11 @@ border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </div>
 </div>
 
-<!-- KEY -->
-<div id="keyBox" style="display:none">
-<input id="newKey" placeholder="Key mới">
-<button onclick="createKey()">TẠO KEY</button>
-<input id="delKey" placeholder="Key cần xóa">
-<button class="danger" onclick="deleteKey()">XÓA KEY</button>
-<button onclick="backLogin()">⬅ QUAY LẠI</button>
-<pre id="keyList"></pre>
-</div>
-
 <!-- BOT -->
 <div id="bot" style="display:none">
 <div id="botMain" class="big"></div>
 <div id="botSub" class="big"></div>
 <div id="betSuggest" class="bet"></div>
-
 <div class="stats" id="stats"></div>
 
 <select id="killer">
@@ -76,12 +58,11 @@ border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 <button class="sub" onclick="logout()">ĐĂNG XUẤT</button>
 
 <canvas id="chart" width="360" height="180"></canvas>
-
 <div class="log" id="logBox"><b>📜 NHẬT KÝ BOT</b></div>
 </div>
 </div>
 
-<!-- RESET MODAL -->
+<!-- RESET -->
 <div class="modal" id="resetModal">
 <div class="modalBox">
 <p>Bạn chắc chắn muốn reset?</p>
@@ -91,55 +72,81 @@ border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </div>
 
 <script>
-/* CONFIG */
+/* ================== SERVER CONFIG (ĐÃ FIX) ================== */
+const SERVER_URL = "https://admin-key-server.onrender.com";
+
+/* ================== DEVICE ID ================== */
+function getDeviceId(){
+  let id = localStorage.getItem("device_id");
+  if(!id){
+    id = "DEV-" + Math.random().toString(36).substr(2,10);
+    localStorage.setItem("device_id", id);
+  }
+  return id;
+}
+
+/* ================== CHECK KEY ONLINE (ĐÃ FIX) ================== */
+async function checkKey(){
+  const key = keyInput.value.trim();
+  if(!key) return alert("Nhập key!");
+
+  try{
+    const res = await fetch(SERVER_URL + "/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: key,
+        device: getDeviceId()
+      })
+    });
+
+    if(!res.ok) throw new Error("SERVER_ERROR");
+
+    const data = await res.json();
+    if(!data.ok){
+      alert("❌ " + (data.msg || "Key không hợp lệ"));
+      return;
+    }
+
+    // LOGIN OK
+    login.style.display = "none";
+    bot.style.display = "block";
+    drawRooms();
+    analyze();
+
+  }catch(err){
+    alert("❌ Không kết nối được server (Render sleep hoặc sai API)");
+  }
+}
+
+function logout(){ location.reload(); }
+
+/* ================== BOT CORE ================== */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
 const MAX_MAIN=94.32;
 
-/* DATA */
 let data=JSON.parse(localStorage.getItem("gacon46"))||{
 rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[]
 };
+
 let selected=[],botPick="";
-
-/* ROOM HISTORY */
 let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
-ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0,lastPick:0});
+ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0});
 
-/* KEY */
-function checkKey(){
-let k=JSON.parse(localStorage.getItem("keys")||"[]");
-if(k.includes(keyInput.value)){
-login.style.display="none";bot.style.display="block";
-drawRooms();analyze();
-}else alert("Key sai");
-}
-function openKey(){login.style.display="none";keyBox.style.display="block";showKeys()}
-function backLogin(){keyBox.style.display="none";login.style.display="block"}
-function logout(){location.reload()}
-function createKey(){
-let k=JSON.parse(localStorage.getItem("keys")||"[]");
-if(newKey.value&&!k.includes(newKey.value)){
-k.push(newKey.value);localStorage.setItem("keys",JSON.stringify(k));
-showKeys();}}
-function deleteKey(){
-let k=JSON.parse(localStorage.getItem("keys")||"[]");
-k=k.filter(x=>x!==delKey.value);
-localStorage.setItem("keys",JSON.stringify(k));
-showKeys();}
-function showKeys(){
-keyList.innerText=(JSON.parse(localStorage.getItem("keys")||"[]")).join("\n")||"Chưa có key";}
-
-/* BOT */
 function drawRooms(){
 rooms.innerHTML="";selected=[];
 ROOMS.forEach(r=>{
 let d=document.createElement("div");
-d.className="gate";d.innerText=r;
+d.className="gate"; d.innerText=r;
 d.onclick=()=>{
 if(d.classList.contains("sel")){
-d.classList.remove("sel");selected=selected.filter(x=>x!==r);return;}
-if(selected.length>=killer.value)return;
-d.classList.add("sel");selected.push(r);
+d.classList.remove("sel");
+selected=selected.filter(x=>x!==r);
+return;
+}
+if(selected.length>=killer.value) return;
+d.classList.add("sel");
+selected.push(r);
 };
 rooms.appendChild(d);
 });
@@ -166,7 +173,6 @@ return;
 
 botPick=ROOMS[Math.floor(Math.random()*ROOMS.length)];
 let sub=botPhuPick(botPick);
-
 let rate=Math.min(MAX_MAIN,Math.round(data.win/(data.win+data.lose)*100||0));
 let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
 
@@ -174,8 +180,7 @@ botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
 botSub.innerText=`BOT PHỤ NÉ: ${sub.room} (${sub.trust}%)`;
 betSuggest.innerText=bet;
 
-stats.innerHTML=
-`🎯 Ván: ${data.rounds.length}<br>
+stats.innerHTML=`🎯 Ván: ${data.rounds.length}<br>
 Win: ${data.win} | Lose: ${data.lose}<br>
 Chuỗi win: ${data.winStreak}<br>
 Chuỗi thua: ${data.loseStreak}`;
@@ -184,8 +189,8 @@ drawChart();
 }
 
 function saveRound(){
-if(Date.now()-data.last<5000)return alert("Chống spam");
-if(selected.length!=killer.value)return;
+if(Date.now()-data.last<5000) return alert("Chống spam");
+if(selected.length!=killer.value) return;
 
 let result="WIN";
 if(data.rounds.length>=3){
@@ -200,17 +205,17 @@ data.win++;data.winStreak++;data.loseStreak=0;
 data.rounds.push([...selected]);
 data.last=Date.now();
 data.log.push(`${result} | Bot: ${botPick} | Giết: ${selected.join(", ")}`);
-if(data.log.length>6)data.log.shift();
+if(data.log.length>6) data.log.shift();
+
 localStorage.setItem("gacon46",JSON.stringify(data));
 logBox.innerHTML="<b>📜 NHẬT KÝ BOT</b><br>"+data.log.join("<br>");
-drawRooms();analyze();
+drawRooms(); analyze();
 }
 
-/* CHART */
 function drawChart(){
 let ctx=chart.getContext("2d");
 ctx.clearRect(0,0,360,180);
-let count={};ROOMS.forEach(r=>count[r]=0);
+let count={}; ROOMS.forEach(r=>count[r]=0);
 data.rounds.flat().forEach(r=>count[r]++);
 let max=Math.max(...Object.values(count),1);
 
@@ -224,14 +229,10 @@ ctx.fillText(r[0],35+i*65,170);
 });
 }
 
-/* RESET */
 function openReset(){resetModal.style.display="flex"}
 function closeReset(){resetModal.style.display="none"}
 function confirmReset(){
-localStorage.removeItem("gacon46");
-localStorage.removeItem("roomHistory");
-resetModal.style.display="none";
-alert("✅ Đã reset dữ liệu bot");
+localStorage.clear();
 location.reload();
 }
 </script>
