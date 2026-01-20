@@ -28,20 +28,13 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <!-- LOGIN -->
 <div id="login">
 <h2 class="big">🤖 BOT GÀ CON 4.6</h2>
-
-<div class="box">
-<b>🆔 ID THIẾT BỊ</b><br>
-<span id="deviceBox"></span>
-</div>
-
 <input id="keyInput" placeholder="Nhập key">
 <button onclick="checkKey()">XÁC NHẬN</button>
-
 <div class="box">
-<b>UPDATE 4.6</b><br>
-+ Chuỗi win / thua<br>
-+ Biểu đồ % phòng<br>
-+ Bot phụ né phòng nguy hiểm<br>
+<b>UPDATE</b><br>
++ Bot chính + Bot phụ 1 + Bot phụ 2<br>
++ Key online gắn ID thiết bị<br>
++ FREE / VIP + hạn dùng<br>
 </div>
 </div>
 
@@ -49,6 +42,7 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <div id="bot" style="display:none">
 <div id="botMain" class="big"></div>
 <div id="botSub" class="big"></div>
+<div id="botSub2" class="big"></div>
 <div id="betSuggest" class="bet"></div>
 
 <div class="stats" id="stats"></div>
@@ -80,167 +74,186 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 </div>
 
 <script>
-/* ================== SERVER CONFIG ================== */
-const SERVER_URL = "https://admin-key-server.onrender.com";
+/* ================= SERVER ================= */
+const SERVER_URL="https://admin-key-server.onrender.com";
 
-/* ================== DEVICE ID ================== */
+/* ================= DEVICE ID ================= */
 function getDeviceId(){
-  let id = localStorage.getItem("device_id");
-  if(!id){
-    id = "DEV-" + Math.random().toString(36).substr(2,9);
-    localStorage.setItem("device_id", id);
-  }
-  return id;
+ let id=localStorage.getItem("device_id");
+ if(!id){
+  id="DEV-"+Math.random().toString(36).slice(2,10);
+  localStorage.setItem("device_id",id);
+ }
+ return id;
 }
-deviceBox.innerText = getDeviceId();
 
-/* ================== CHECK KEY ================== */
+/* ================= CHECK KEY ================= */
 async function checkKey(){
-  const key = keyInput.value.trim();
-  if(!key) return alert("Nhập key!");
+ const key=keyInput.value.trim();
+ if(!key) return alert("Nhập key");
 
-  try{
-    const res = await fetch(SERVER_URL + "/check",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        key:key,
-        device:getDeviceId()
-      })
-    });
+ try{
+  const res=await fetch(SERVER_URL+"/check",{
+   method:"POST",
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({key,device:getDeviceId()})
+  });
+  const d=await res.json();
+  if(!d.ok) return alert("❌ "+d.msg);
 
-    const data = await res.json();
-    if(!data.ok) return alert("❌ " + data.msg);
+  window.KEY_TYPE=d.type;
+  window.KEY_EXPIRE=d.expire;
 
-    login.style.display="none";
-    bot.style.display="block";
-    drawRooms();
-    analyze();
-
-  }catch(e){
-    alert("❌ Không kết nối được server");
-  }
+  login.style.display="none";
+  bot.style.display="block";
+  drawRooms(); analyze();
+ }catch(e){
+  alert("❌ Không kết nối server");
+ }
 }
 
-function logout(){
-  location.reload();
-}
+function logout(){location.reload()}
 
-/* ================== BOT CORE (GIỮ NGUYÊN 100%) ================== */
+/* ================= BOT CORE ================= */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
 const MAX_MAIN=94.32;
 
 let data=JSON.parse(localStorage.getItem("gacon46"))||{
-rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[]
+ rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[]
 };
-
 let selected=[],botPick="";
 let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
-ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0,lastPick:0});
+ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0});
 
+/* ================= ROOMS ================= */
 function drawRooms(){
-rooms.innerHTML="";selected=[];
-ROOMS.forEach(r=>{
-let d=document.createElement("div");
-d.className="gate";
-d.innerText=r;
-d.onclick=()=>{
-if(d.classList.contains("sel")){
-d.classList.remove("sel");
-selected=selected.filter(x=>x!==r);
-return;
-}
-if(selected.length>=killer.value)return;
-d.classList.add("sel");
-selected.push(r);
-};
-rooms.appendChild(d);
-});
+ rooms.innerHTML="";selected=[];
+ ROOMS.forEach(r=>{
+  let d=document.createElement("div");
+  d.className="gate";d.innerText=r;
+  d.onclick=()=>{
+   if(d.classList.contains("sel")){
+    d.classList.remove("sel");
+    selected=selected.filter(x=>x!==r);return;
+   }
+   if(selected.length>=killer.value)return;
+   d.classList.add("sel");selected.push(r);
+  };
+  rooms.appendChild(d);
+ });
 }
 
+/* ================= BOT PHỤ 1 ================= */
 function botPhuPick(main){
-let c=ROOMS.filter(r=>r!==main);
-let pick=c[Math.floor(Math.random()*c.length)];
-let h=roomHistory[pick];
-let trust=Math.max(25,Math.min(84.32,60+(h.win-h.lose)*2-h.loseStreak*8));
-return {room:pick,trust:trust.toFixed(2)};
+ let c=ROOMS.filter(r=>r!==main);
+ let pick=c[Math.floor(Math.random()*c.length)];
+ let h=roomHistory[pick];
+ let trust=60+(h.win-h.lose)*2-h.loseStreak*8;
+ trust=Math.max(25,Math.min(84.32,trust));
+ return {room:pick,trust:trust.toFixed(1)};
 }
 
+/* ================= BOT PHỤ 2 ================= */
+function botPhu2(room){
+ let h=roomHistory[room];
+ let score=100-h.loseStreak*20-h.lose*2+h.win*1.5;
+ if(KEY_TYPE==="VIP") score+=10;
+ score=Math.max(0,Math.min(100,score));
+
+ let lv="✅ AN TOÀN";
+ if(score<40) lv="🚫 NGUY HIỂM";
+ else if(score<65) lv="⚠️ CÂN NHẮC";
+ return {score:score.toFixed(1),lv};
+}
+
+/* ================= ANALYZE ================= */
 function analyze(){
-if(data.rounds.length<3){
-botMain.innerText="🤖 BOT ĐANG HỌC";
-betSuggest.innerText="3 VÁN ĐẦU KHÔNG TÍNH";
-return;
+ if(data.rounds.length<3){
+  botMain.innerText="🤖 BOT ĐANG HỌC";
+  betSuggest.innerText="3 VÁN ĐẦU KHÔNG TÍNH";
+  return;
+ }
+ if(data.loseStreak>=4){
+  betSuggest.innerText="⛔ BOT NGHỈ";
+  return;
+ }
+
+ botPick=ROOMS[Math.floor(Math.random()*ROOMS.length)];
+ let sub=botPhuPick(botPick);
+ let p2=botPhu2(botPick);
+
+ let rate=Math.min(MAX_MAIN,Math.round(data.win/(data.win+data.lose)*100||0));
+ let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
+
+ botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
+ botSub.innerText=`BOT PHỤ 1 NÉ: ${sub.room} (${sub.trust}%)`;
+ botSub2.innerText=`BOT PHỤ 2: ${p2.lv} (${p2.score}%)`;
+ betSuggest.innerText=bet;
+
+ let exp=new Date(KEY_EXPIRE).toLocaleString();
+ stats.innerHTML=
+ `🔑 ${KEY_TYPE} | ⏳ ${exp}<br>
+ 🎯 Ván: ${data.rounds.length}<br>
+ Win: ${data.win} | Lose: ${data.lose}<br>
+ Chuỗi win: ${data.winStreak} | Chuỗi thua: ${data.loseStreak}`;
+
+ drawChart();
 }
-if(data.loseStreak>=4){
-betSuggest.innerText="⛔ BOT NGHỈ";
-return;
-}
 
-botPick=ROOMS[Math.floor(Math.random()*ROOMS.length)];
-let sub=botPhuPick(botPick);
-let rate=Math.min(MAX_MAIN,Math.round(data.win/(data.win+data.lose)*100||0));
-let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
-
-botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
-botSub.innerText=`BOT PHỤ: NÉ ${sub.room} (${sub.trust}%)`;
-betSuggest.innerText=bet;
-
-stats.innerHTML=`🎯 Ván: ${data.rounds.length}<br>
-Win: ${data.win} | Lose: ${data.lose}<br>
-Chuỗi win: ${data.winStreak}<br>
-Chuỗi thua: ${data.loseStreak}`;
-
-drawChart();
-}
-
+/* ================= SAVE ROUND ================= */
 function saveRound(){
-if(Date.now()-data.last<5000)return alert("Chống spam");
-if(selected.length!=killer.value)return;
+ if(Date.now()-data.last<5000)return alert("Chống spam");
+ if(selected.length!=killer.value)return;
 
-let result="WIN";
-if(data.rounds.length>=3){
-if(selected.includes(botPick)){
-data.lose++;data.loseStreak++;data.winStreak=0;
-result="LOSE";
-}else{
-data.win++;data.winStreak++;data.loseStreak=0;
-}
+ let result="WIN";
+ if(data.rounds.length>=3){
+  if(selected.includes(botPick)){
+   data.lose++;data.loseStreak++;data.winStreak=0;result="LOSE";
+  }else{
+   data.win++;data.winStreak++;data.loseStreak=0;
+  }
+ }
+
+ data.rounds.push([...selected]);
+ data.last=Date.now();
+ data.log.push(`${result} | Bot: ${botPick} | Giết: ${selected.join(", ")}`);
+ if(data.log.length>6)data.log.shift();
+
+ selected.forEach(r=>{
+  if(result==="WIN") roomHistory[r].win++;
+  else roomHistory[r].lose++;
+ });
+
+ localStorage.setItem("gacon46",JSON.stringify(data));
+ localStorage.setItem("roomHistory",JSON.stringify(roomHistory));
+ logBox.innerHTML="<b>📜 NHẬT KÝ BOT</b><br>"+data.log.join("<br>");
+ drawRooms(); analyze();
 }
 
-data.rounds.push([...selected]);
-data.last=Date.now();
-data.log.push(`${result} | Bot: ${botPick} | Giết: ${selected.join(", ")}`);
-if(data.log.length>6)data.log.shift();
-localStorage.setItem("gacon46",JSON.stringify(data));
-logBox.innerHTML="<b>📜 NHẬT KÝ BOT</b><br>"+data.log.join("<br>");
-drawRooms();
-analyze();
-}
-
+/* ================= CHART ================= */
 function drawChart(){
-let ctx=chart.getContext("2d");
-ctx.clearRect(0,0,360,180);
-let count={};
-ROOMS.forEach(r=>count[r]=0);
-data.rounds.flat().forEach(r=>count[r]++);
-let max=Math.max(...Object.values(count),1);
+ let ctx=chart.getContext("2d");
+ ctx.clearRect(0,0,360,180);
+ let count={};ROOMS.forEach(r=>count[r]=0);
+ data.rounds.flat().forEach(r=>count[r]++);
+ let max=Math.max(...Object.values(count),1);
 
-ROOMS.forEach((r,i)=>{
-let h=(count[r]/max)*120;
-let pct=Math.round(count[r]/data.rounds.length*100||0);
-ctx.fillStyle="#00ff66";
-ctx.fillRect(20+i*65,160-h,40,h);
-ctx.fillText(pct+"%",25+i*65,150-h);
-ctx.fillText(r[0],35+i*65,170);
-});
+ ROOMS.forEach((r,i)=>{
+  let h=(count[r]/max)*120;
+  let pct=Math.round(count[r]/data.rounds.length*100||0);
+  ctx.fillStyle="#00ff66";
+  ctx.fillRect(20+i*65,160-h,40,h);
+  ctx.fillText(pct+"%",25+i*65,150-h);
+  ctx.fillText(r[0],35+i*65,170);
+ });
 }
 
+/* ================= RESET ================= */
 function openReset(){resetModal.style.display="flex"}
 function closeReset(){resetModal.style.display="none"}
 function confirmReset(){
-localStorage.clear();
-location.reload();
+ localStorage.clear();
+ location.reload();
 }
 </script>
 </body>
