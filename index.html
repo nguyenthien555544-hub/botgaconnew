@@ -31,10 +31,11 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <input id="keyInput" placeholder="Nhập key">
 <button onclick="checkKey()">XÁC NHẬN</button>
 <div class="box">
-<b>UPDATE</b><br>
-+ Bot chính + Bot phụ 1 + Bot phụ 2<br>
-+ Key online gắn ID thiết bị<br>
-+ FREE / VIP + hạn dùng<br>
+<b>UPDATE 4.6</b><br>
++ Bot chính + Bot phụ né<br>
++ Chuỗi win / thua<br>
++ Biểu đồ % phòng<br>
++ Key online + ID máy<br>
 </div>
 </div>
 
@@ -74,10 +75,10 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 </div>
 
 <script>
-/* ================= SERVER ================= */
+/* ========== SERVER ========== */
 const SERVER_URL="https://admin-key-server.onrender.com";
 
-/* ================= DEVICE ID ================= */
+/* ========== DEVICE ID ========== */
 function getDeviceId(){
  let id=localStorage.getItem("device_id");
  if(!id){
@@ -87,11 +88,12 @@ function getDeviceId(){
  return id;
 }
 
-/* ================= CHECK KEY ================= */
+/* ========== CHECK KEY ========== */
+let KEY_TYPE="FREE", KEY_EXPIRE=0;
+
 async function checkKey(){
  const key=keyInput.value.trim();
  if(!key) return alert("Nhập key");
-
  try{
   const res=await fetch(SERVER_URL+"/check",{
    method:"POST",
@@ -101,8 +103,8 @@ async function checkKey(){
   const d=await res.json();
   if(!d.ok) return alert("❌ "+d.msg);
 
-  window.KEY_TYPE=d.type;
-  window.KEY_EXPIRE=d.expire;
+  KEY_TYPE=d.type;
+  KEY_EXPIRE=d.expire;
 
   login.style.display="none";
   bot.style.display="block";
@@ -111,10 +113,9 @@ async function checkKey(){
   alert("❌ Không kết nối server");
  }
 }
-
 function logout(){location.reload()}
 
-/* ================= BOT CORE ================= */
+/* ========== BOT CORE 4.6 ========== */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
 const MAX_MAIN=94.32;
 
@@ -125,7 +126,7 @@ let selected=[],botPick="";
 let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
 ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0});
 
-/* ================= ROOMS ================= */
+/* ========== ROOMS ========== */
 function drawRooms(){
  rooms.innerHTML="";selected=[];
  ROOMS.forEach(r=>{
@@ -133,8 +134,7 @@ function drawRooms(){
   d.className="gate";d.innerText=r;
   d.onclick=()=>{
    if(d.classList.contains("sel")){
-    d.classList.remove("sel");
-    selected=selected.filter(x=>x!==r);return;
+    d.classList.remove("sel");selected=selected.filter(x=>x!==r);return;
    }
    if(selected.length>=killer.value)return;
    d.classList.add("sel");selected.push(r);
@@ -143,30 +143,25 @@ function drawRooms(){
  });
 }
 
-/* ================= BOT PHỤ 1 ================= */
+/* ========== BOT PHỤ 1 (CŨ) ========== */
 function botPhuPick(main){
  let c=ROOMS.filter(r=>r!==main);
  let pick=c[Math.floor(Math.random()*c.length)];
  let h=roomHistory[pick];
- let trust=60+(h.win-h.lose)*2-h.loseStreak*8;
- trust=Math.max(25,Math.min(84.32,trust));
+ let trust=Math.max(25,Math.min(84.32,60+(h.win-h.lose)*2-h.loseStreak*8));
  return {room:pick,trust:trust.toFixed(1)};
 }
 
-/* ================= BOT PHỤ 2 ================= */
+/* ========== BOT PHỤ 2 (MỚI – KHÔNG PHÁ 4.6) ========== */
 function botPhu2(room){
  let h=roomHistory[room];
  let score=100-h.loseStreak*20-h.lose*2+h.win*1.5;
- if(KEY_TYPE==="VIP") score+=10;
  score=Math.max(0,Math.min(100,score));
-
- let lv="✅ AN TOÀN";
- if(score<40) lv="🚫 NGUY HIỂM";
- else if(score<65) lv="⚠️ CÂN NHẮC";
+ let lv= score<40?"🚫 NGUY HIỂM":score<65?"⚠️ CÂN NHẮC":"✅ AN TOÀN";
  return {score:score.toFixed(1),lv};
 }
 
-/* ================= ANALYZE ================= */
+/* ========== ANALYZE ========== */
 function analyze(){
  if(data.rounds.length<3){
   botMain.innerText="🤖 BOT ĐANG HỌC";
@@ -186,13 +181,12 @@ function analyze(){
  let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
 
  botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
- botSub.innerText=`BOT PHỤ 1 NÉ: ${sub.room} (${sub.trust}%)`;
+ botSub.innerText=`BOT PHỤ NÉ: ${sub.room} (${sub.trust}%)`;
  botSub2.innerText=`BOT PHỤ 2: ${p2.lv} (${p2.score}%)`;
  betSuggest.innerText=bet;
 
- let exp=new Date(KEY_EXPIRE).toLocaleString();
  stats.innerHTML=
- `🔑 ${KEY_TYPE} | ⏳ ${exp}<br>
+ `🔑 ${KEY_TYPE}<br>
  🎯 Ván: ${data.rounds.length}<br>
  Win: ${data.win} | Lose: ${data.lose}<br>
  Chuỗi win: ${data.winStreak} | Chuỗi thua: ${data.loseStreak}`;
@@ -200,7 +194,7 @@ function analyze(){
  drawChart();
 }
 
-/* ================= SAVE ROUND ================= */
+/* ========== SAVE ROUND ========== */
 function saveRound(){
  if(Date.now()-data.last<5000)return alert("Chống spam");
  if(selected.length!=killer.value)return;
@@ -220,8 +214,7 @@ function saveRound(){
  if(data.log.length>6)data.log.shift();
 
  selected.forEach(r=>{
-  if(result==="WIN") roomHistory[r].win++;
-  else roomHistory[r].lose++;
+  result==="WIN"?roomHistory[r].win++:roomHistory[r].lose++;
  });
 
  localStorage.setItem("gacon46",JSON.stringify(data));
@@ -230,7 +223,7 @@ function saveRound(){
  drawRooms(); analyze();
 }
 
-/* ================= CHART ================= */
+/* ========== CHART ========== */
 function drawChart(){
  let ctx=chart.getContext("2d");
  ctx.clearRect(0,0,360,180);
@@ -248,7 +241,7 @@ function drawChart(){
  });
 }
 
-/* ================= RESET ================= */
+/* ========== RESET ========== */
 function openReset(){resetModal.style.display="flex"}
 function closeReset(){resetModal.style.display="none"}
 function confirmReset(){
