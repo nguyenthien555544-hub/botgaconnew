@@ -2,12 +2,11 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>BOT GÀ CON 4.6 FULL</title>
+<title>BOT GÀ CON 4.6 FULL FIX</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
-.app{max-width:420px;margin:auto;padding:14px;border:2px solid #00ff66}
+.app{max-width:420px;margin:auto;padding:15px;border:2px solid #00ff66}
 input,button,select{width:100%;padding:10px;margin:6px 0;background:#000;border:1px solid #00ff66;color:#00ff66}
 button.danger{border-color:#ff4444;color:#ff4444}
 button.sub{border-color:#00aaff;color:#00aaff}
@@ -18,7 +17,7 @@ button.sub{border-color:#00aaff;color:#00aaff}
 .gate.sel{background:#003300}
 canvas{border:1px solid #00ff66;margin-top:10px}
 .big{text-align:center;font-size:20px}
-.small{text-align:center;font-size:12px;opacity:.8}
+.small{text-align:center;font-size:12px;opacity:.7}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:9}
 .modalBox{border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </style>
@@ -30,14 +29,13 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <!-- LOGIN -->
 <div id="login">
 <h2 class="big">🤖 BOT GÀ CON 4.6</h2>
-<div class="small">🆔 ID THIẾT BỊ: <span id="deviceView"></span></div>
+<div class="small">ID THIẾT BỊ: <span id="deviceView"></span></div>
 <input id="keyInput" placeholder="Nhập key">
 <button onclick="checkKey()">XÁC NHẬN</button>
-
 <div class="box">
 <b>FULL 4.6</b><br>
 + Bot chính + Bot phụ né + Bot phụ 2<br>
-+ SAFE MODE – Chuỗi win/thua<br>
++ Chuỗi win / thua + Safe Mode<br>
 + Biểu đồ % phòng<br>
 + Key online gắn ID thiết bị<br>
 </div>
@@ -72,17 +70,17 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <!-- RESET -->
 <div class="modal" id="resetModal">
 <div class="modalBox">
-<p>Reset bot (KHÔNG MẤT ID)</p>
+<p>Reset bot (KHÔNG MẤT ID)?</p>
 <button onclick="confirmReset()">OK</button>
-<button class="danger" onclick="closeReset()">HỦY</button>
+<button class="danger" onclick="closeReset()">KHÔNG</button>
 </div>
 </div>
 
 <script>
-/* ================= SERVER ================= */
-const SERVER="https://admin-key-server.onrender.com";
+/* ========== SERVER ========== */
+const SERVER_URL="https://admin-key-server.onrender.com";
 
-/* ================= DEVICE ID ================= */
+/* ========== DEVICE ID ========== */
 function getDeviceId(){
  let id=localStorage.getItem("device_id");
  if(!id){
@@ -93,15 +91,14 @@ function getDeviceId(){
 }
 deviceView.innerText=getDeviceId();
 
-/* ================= CHECK KEY ================= */
+/* ========== CHECK KEY ========== */
 let KEY_TYPE="FREE", KEY_EXPIRE=0;
 
 async function checkKey(){
  const key=keyInput.value.trim();
  if(!key) return alert("Nhập key");
-
  try{
-  const res=await fetch(SERVER+"/check",{
+  const res=await fetch(SERVER_URL+"/check",{
    method:"POST",
    headers:{'Content-Type':'application/json'},
    body:JSON.stringify({key,device:getDeviceId()})
@@ -115,25 +112,24 @@ async function checkKey(){
   login.style.display="none";
   bot.style.display="block";
   drawRooms(); analyze();
- }catch{
+ }catch(e){
   alert("❌ Không kết nối server");
  }
 }
-
 function logout(){location.reload()}
 
-/* ================= BOT CORE ================= */
+/* ========== BOT CORE 4.6 ========== */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
+const MAX_MAIN=94.32;
 
 let data=JSON.parse(localStorage.getItem("gacon46"))||{
- rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,lastBot:null,log:[]
+ rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[],lastBot:null
 };
-
+let selected=[],botPick="";
 let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
 ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0});
-let selected=[],botPick="";
 
-/* ================= ROOMS ================= */
+/* ========== ROOMS ========== */
 function drawRooms(){
  rooms.innerHTML="";selected=[];
  ROOMS.forEach(r=>{
@@ -141,7 +137,8 @@ function drawRooms(){
   d.className="gate";d.innerText=r;
   d.onclick=()=>{
    if(d.classList.contains("sel")){
-    d.classList.remove("sel");selected=selected.filter(x=>x!==r);return;
+    d.classList.remove("sel");
+    selected=selected.filter(x=>x!==r);return;
    }
    if(selected.length>=killer.value)return;
    d.classList.add("sel");selected.push(r);
@@ -150,7 +147,7 @@ function drawRooms(){
  });
 }
 
-/* ================= BOT PHỤ 1 ================= */
+/* ========== BOT PHỤ 1 ========== */
 function botPhuPick(main){
  let c=ROOMS.filter(r=>r!==main);
  let pick=c[Math.floor(Math.random()*c.length)];
@@ -160,7 +157,7 @@ function botPhuPick(main){
  return {room:pick,trust:trust.toFixed(1)};
 }
 
-/* ================= BOT PHỤ 2 ================= */
+/* ========== BOT PHỤ 2 ========== */
 function botPhu2(room){
  let h=roomHistory[room];
  let score=100-h.loseStreak*20-h.lose*2+h.win*1.5;
@@ -170,7 +167,7 @@ function botPhu2(room){
  return {score:score.toFixed(1),lv};
 }
 
-/* ================= ANALYZE ================= */
+/* ========== ANALYZE ========== */
 function analyze(){
  if(data.rounds.length<3){
   botMain.innerText="🤖 BOT ĐANG HỌC";
@@ -181,19 +178,18 @@ function analyze(){
  let rate=Math.round(data.win/(data.win+data.lose)*100||0);
 
  if(data.loseStreak>=4 || (data.winStreak>=5 && rate>80)){
-  betSuggest.innerText="⛔ SAFE MODE – BOT NGHỈ";
+  botMain.innerText="⛔ SAFE MODE";
+  betSuggest.innerText="BOT NGHỈ";
   return;
  }
 
  do{
   botPick=ROOMS[Math.floor(Math.random()*ROOMS.length)];
  }while(botPick===data.lastBot);
-
  data.lastBot=botPick;
 
  let sub=botPhuPick(botPick);
  let p2=botPhu2(botPick);
-
  let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
 
  botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
@@ -211,7 +207,7 @@ function analyze(){
  drawChart();
 }
 
-/* ================= SAVE ROUND ================= */
+/* ========== SAVE ROUND ========== */
 function saveRound(){
  if(Date.now()-data.last<5000)return alert("Chống spam");
  if(selected.length!=killer.value)return;
@@ -236,12 +232,11 @@ function saveRound(){
 
  localStorage.setItem("gacon46",JSON.stringify(data));
  localStorage.setItem("roomHistory",JSON.stringify(roomHistory));
-
  logBox.innerHTML="<b>📜 NHẬT KÝ BOT</b><br>"+data.log.join("<br>");
  drawRooms(); analyze();
 }
 
-/* ================= CHART ================= */
+/* ========== CHART ========== */
 function drawChart(){
  let ctx=chart.getContext("2d");
  ctx.clearRect(0,0,360,180);
@@ -259,7 +254,7 @@ function drawChart(){
  });
 }
 
-/* ================= RESET ================= */
+/* ========== RESET ========== */
 function openReset(){resetModal.style.display="flex"}
 function closeReset(){resetModal.style.display="none"}
 function confirmReset(){
