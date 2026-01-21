@@ -31,14 +31,13 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <div id="login">
 <h2 class="big">🤖 BOT GÀ CON 4.6</h2>
 <div class="small">🆔 ID THIẾT BỊ: <span id="deviceView"></span></div>
-
 <input id="keyInput" placeholder="Nhập key">
 <button onclick="checkKey()">XÁC NHẬN</button>
 
 <div class="box">
 <b>FULL 4.6</b><br>
 + Bot chính + Bot phụ né + Bot phụ 2<br>
-+ Chuỗi win / thua + SAFE MODE<br>
++ SAFE MODE – Chuỗi win/thua<br>
 + Biểu đồ % phòng<br>
 + Key online gắn ID thiết bị<br>
 </div>
@@ -80,7 +79,7 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 </div>
 
 <script>
-/* ================= CONFIG ================= */
+/* ================= SERVER ================= */
 const SERVER="https://admin-key-server.onrender.com";
 
 /* ================= DEVICE ID ================= */
@@ -123,9 +122,8 @@ async function checkKey(){
 
 function logout(){location.reload()}
 
-/* ================= BOT CORE 4.6 ================= */
+/* ================= BOT CORE ================= */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
-const MAX_MAIN=94.32;
 
 let data=JSON.parse(localStorage.getItem("gacon46"))||{
  rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,lastBot:null,log:[]
@@ -162,7 +160,7 @@ function botPhuPick(main){
  return {room:pick,trust:trust.toFixed(1)};
 }
 
-/* ================= BOT PHỤ 2 (ĐÁNH GIÁ RỦI RO) ================= */
+/* ================= BOT PHỤ 2 ================= */
 function botPhu2(room){
  let h=roomHistory[room];
  let score=100-h.loseStreak*20-h.lose*2+h.win*1.5;
