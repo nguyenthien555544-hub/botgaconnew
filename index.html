@@ -17,7 +17,7 @@ button.sub{border-color:#00aaff;color:#00aaff}
 .gate.sel{background:#003300}
 canvas{border:1px solid #00ff66;margin-top:10px}
 .big{text-align:center;font-size:20px}
-.small{text-align:center;font-size:12px;opacity:.8}
+.small{text-align:center;font-size:12px;opacity:.7}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:9}
 .modalBox{border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </style>
@@ -34,13 +34,10 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <button onclick="checkKey()">XÁC NHẬN</button>
 <div class="box">
 <b>FULL 4.6</b><br>
-• Bot chính<br>
-• Bot phụ né<br>
-• Bot phụ 2 (cảnh báo rủi ro)<br>
-• Chuỗi win / thua<br>
-• Safe Mode<br>
-• Biểu đồ phòng<br>
-• Key online gắn ID<br>
++ Bot chính + Bot phụ né + Bot phụ 2<br>
++ Chuỗi win / thua + Safe Mode<br>
++ Biểu đồ % phòng<br>
++ Key online gắn ID thiết bị<br>
 </div>
 </div>
 
@@ -80,10 +77,10 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 </div>
 
 <script>
-/* ================= SERVER ================= */
+/* ========== SERVER ========== */
 const SERVER_URL="https://admin-key-server.onrender.com";
 
-/* ================= DEVICE ID ================= */
+/* ========== DEVICE ID ========== */
 function getDeviceId(){
  let id=localStorage.getItem("device_id");
  if(!id){
@@ -94,7 +91,7 @@ function getDeviceId(){
 }
 deviceView.innerText=getDeviceId();
 
-/* ================= CHECK KEY ================= */
+/* ========== CHECK KEY ========== */
 let KEY_TYPE="FREE", KEY_EXPIRE=0;
 
 async function checkKey(){
@@ -121,8 +118,9 @@ async function checkKey(){
 }
 function logout(){location.reload()}
 
-/* ================= BOT CORE 4.6 ================= */
+/* ========== BOT CORE 4.6 ========== */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
+const MAX_MAIN=94.32;
 
 let data=JSON.parse(localStorage.getItem("gacon46"))||{
  rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[],lastBot:null
@@ -131,7 +129,7 @@ let selected=[],botPick="";
 let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
 ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0});
 
-/* ================= ROOMS ================= */
+/* ========== ROOMS ========== */
 function drawRooms(){
  rooms.innerHTML="";selected=[];
  ROOMS.forEach(r=>{
@@ -140,18 +138,16 @@ function drawRooms(){
   d.onclick=()=>{
    if(d.classList.contains("sel")){
     d.classList.remove("sel");
-    selected=selected.filter(x=>x!==r);
-    return;
+    selected=selected.filter(x=>x!==r);return;
    }
    if(selected.length>=killer.value)return;
-   d.classList.add("sel");
-   selected.push(r);
+   d.classList.add("sel");selected.push(r);
   };
   rooms.appendChild(d);
  });
 }
 
-/* ================= BOT PHỤ 1 – NÉ ================= */
+/* ========== BOT PHỤ 1 ========== */
 function botPhuPick(main){
  let c=ROOMS.filter(r=>r!==main);
  let pick=c[Math.floor(Math.random()*c.length)];
@@ -161,19 +157,17 @@ function botPhuPick(main){
  return {room:pick,trust:trust.toFixed(1)};
 }
 
-/* ================= BOT PHỤ 2 – CẢNH BÁO RỦI RO ================= */
+/* ========== BOT PHỤ 2 ========== */
 function botPhu2(room){
  let h=roomHistory[room];
- let risk=h.loseStreak*25+h.lose*4-h.win*2;
- if(KEY_TYPE==="VIP") risk-=10;
- risk=Math.max(0,Math.min(100,risk));
- let level="🟢 AN TOÀN";
- if(risk>=70) level="🔴 NGUY HIỂM CAO";
- else if(risk>=40) level="🟠 RỦI RO";
- return {risk:risk.toFixed(1),level};
+ let score=100-h.loseStreak*20-h.lose*2+h.win*1.5;
+ if(KEY_TYPE==="VIP") score+=10;
+ score=Math.max(0,Math.min(100,score));
+ let lv=score<40?"🚫 NGUY HIỂM":score<65?"⚠️ CÂN NHẮC":"✅ AN TOÀN";
+ return {score:score.toFixed(1),lv};
 }
 
-/* ================= ANALYZE ================= */
+/* ========== ANALYZE ========== */
 function analyze(){
  if(data.rounds.length<3){
   botMain.innerText="🤖 BOT ĐANG HỌC";
@@ -184,7 +178,8 @@ function analyze(){
  let rate=Math.round(data.win/(data.win+data.lose)*100||0);
 
  if(data.loseStreak>=4 || (data.winStreak>=5 && rate>80)){
-  betSuggest.innerText="⛔ SAFE MODE – BOT NGHỈ";
+  botMain.innerText="⛔ SAFE MODE";
+  betSuggest.innerText="BOT NGHỈ";
   return;
  }
 
@@ -195,12 +190,12 @@ function analyze(){
 
  let sub=botPhuPick(botPick);
  let p2=botPhu2(botPick);
+ let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
 
  botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
  botSub.innerText=`BOT PHỤ NÉ: ${sub.room} (${sub.trust}%)`;
- botSub2.innerText=`BOT PHỤ 2: ${p2.level} (${p2.risk}%)`;
-
- betSuggest.innerText=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
+ botSub2.innerText=`BOT PHỤ 2: ${p2.lv} (${p2.score}%)`;
+ betSuggest.innerText=bet;
 
  stats.innerHTML=
  `🆔 ${getDeviceId()}<br>
@@ -212,7 +207,7 @@ function analyze(){
  drawChart();
 }
 
-/* ================= SAVE ROUND ================= */
+/* ========== SAVE ROUND ========== */
 function saveRound(){
  if(Date.now()-data.last<5000)return alert("Chống spam");
  if(selected.length!=killer.value)return;
@@ -241,7 +236,7 @@ function saveRound(){
  drawRooms(); analyze();
 }
 
-/* ================= CHART ================= */
+/* ========== CHART ========== */
 function drawChart(){
  let ctx=chart.getContext("2d");
  ctx.clearRect(0,0,360,180);
@@ -259,7 +254,7 @@ function drawChart(){
  });
 }
 
-/* ================= RESET ================= */
+/* ========== RESET ========== */
 function openReset(){resetModal.style.display="flex"}
 function closeReset(){resetModal.style.display="none"}
 function confirmReset(){
