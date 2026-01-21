@@ -2,20 +2,25 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>BOT GÀ CON 4.6 FULL FIX</title>
+<title>BOT GÀ CON 4.6 FULL</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body{background:#000;color:#00ff66;font-family:monospace}
-.app{max-width:420px;margin:auto;padding:15px;border:2px solid #00ff66}
+.app{max-width:420px;margin:auto;padding:14px;border:2px solid #00ff66}
 input,button,select{width:100%;padding:10px;margin:6px 0;background:#000;border:1px solid #00ff66;color:#00ff66}
 button.danger{border-color:#ff4444;color:#ff4444}
+button.sub{border-color:#00aaff;color:#00aaff}
 .box,.stats,.log{border:1px dashed #00ff66;padding:8px;margin:10px 0;font-size:13px}
 .bet{border:2px dashed #00ff66;padding:10px;font-size:18px;text-align:center}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .gate{border:1px solid #00ff66;padding:14px;text-align:center}
 .gate.sel{background:#003300}
-.big{text-align:center;font-size:20px}
 canvas{border:1px solid #00ff66;margin-top:10px}
+.big{text-align:center;font-size:20px}
+.small{text-align:center;font-size:12px;opacity:.8}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:9}
+.modalBox{border:2px solid #00ff66;padding:15px;width:280px;text-align:center}
 </style>
 </head>
 
@@ -25,9 +30,18 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <!-- LOGIN -->
 <div id="login">
 <h2 class="big">🤖 BOT GÀ CON 4.6</h2>
-<div>ID: <span id="deviceView"></span></div>
+<div class="small">🆔 ID THIẾT BỊ: <span id="deviceView"></span></div>
+
 <input id="keyInput" placeholder="Nhập key">
 <button onclick="checkKey()">XÁC NHẬN</button>
+
+<div class="box">
+<b>FULL 4.6</b><br>
++ Bot chính + Bot phụ né + Bot phụ 2<br>
++ Chuỗi win / thua + SAFE MODE<br>
++ Biểu đồ % phòng<br>
++ Key online gắn ID thiết bị<br>
+</div>
 </div>
 
 <!-- BOT -->
@@ -36,6 +50,7 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 <div id="botSub" class="big"></div>
 <div id="botSub2" class="big"></div>
 <div id="betSuggest" class="bet"></div>
+
 <div class="stats" id="stats"></div>
 
 <select id="killer">
@@ -45,19 +60,30 @@ canvas{border:1px solid #00ff66;margin-top:10px}
 </select>
 
 <div class="grid" id="rooms"></div>
+
 <button onclick="saveRound()">LƯU VÁN</button>
-<button class="danger" onclick="resetBot()">RESET</button>
+<button class="danger" onclick="openReset()">RESET BOT</button>
+<button class="sub" onclick="logout()">ĐĂNG XUẤT</button>
 
 <canvas id="chart" width="360" height="180"></canvas>
-<div class="log" id="logBox"><b>📜 NHẬT KÝ</b></div>
+<div class="log" id="logBox"><b>📜 NHẬT KÝ BOT</b></div>
+</div>
+</div>
+
+<!-- RESET -->
+<div class="modal" id="resetModal">
+<div class="modalBox">
+<p>Reset bot (KHÔNG MẤT ID)</p>
+<button onclick="confirmReset()">OK</button>
+<button class="danger" onclick="closeReset()">HỦY</button>
 </div>
 </div>
 
 <script>
 /* ================= CONFIG ================= */
-const SERVER_URL="https://admin-key-server.onrender.com";
+const SERVER="https://admin-key-server.onrender.com";
 
-/* ================= DEVICE ================= */
+/* ================= DEVICE ID ================= */
 function getDeviceId(){
  let id=localStorage.getItem("device_id");
  if(!id){
@@ -68,32 +94,46 @@ function getDeviceId(){
 }
 deviceView.innerText=getDeviceId();
 
-/* ================= KEY ================= */
+/* ================= CHECK KEY ================= */
 let KEY_TYPE="FREE", KEY_EXPIRE=0;
+
 async function checkKey(){
  const key=keyInput.value.trim();
- const r=await fetch(SERVER_URL+"/check",{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({key,device:getDeviceId()})
- });
- const d=await r.json();
- if(!d.ok) return alert(d.msg);
- KEY_TYPE=d.type;
- KEY_EXPIRE=d.expire;
- login.style.display="none";
- bot.style.display="block";
- drawRooms(); analyze();
+ if(!key) return alert("Nhập key");
+
+ try{
+  const res=await fetch(SERVER+"/check",{
+   method:"POST",
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({key,device:getDeviceId()})
+  });
+  const d=await res.json();
+  if(!d.ok) return alert("❌ "+d.msg);
+
+  KEY_TYPE=d.type;
+  KEY_EXPIRE=d.expire;
+
+  login.style.display="none";
+  bot.style.display="block";
+  drawRooms(); analyze();
+ }catch{
+  alert("❌ Không kết nối server");
+ }
 }
 
-/* ================= DATA ================= */
+function logout(){location.reload()}
+
+/* ================= BOT CORE 4.6 ================= */
 const ROOMS=["ANTOÀN","MAY MẮN","TỬ THẦN","BÍ ẨN","MẠO HIỂM"];
+const MAX_MAIN=94.32;
+
 let data=JSON.parse(localStorage.getItem("gacon46"))||{
- rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,log:[],lastBot:null
+ rounds:[],win:0,lose:0,winStreak:0,loseStreak:0,last:0,lastBot:null,log:[]
 };
-let selected=[],botPick="";
+
 let roomHistory=JSON.parse(localStorage.getItem("roomHistory")||"{}");
 ROOMS.forEach(r=>roomHistory[r]??={win:0,lose:0,loseStreak:0});
+let selected=[],botPick="";
 
 /* ================= ROOMS ================= */
 function drawRooms(){
@@ -103,9 +143,7 @@ function drawRooms(){
   d.className="gate";d.innerText=r;
   d.onclick=()=>{
    if(d.classList.contains("sel")){
-    d.classList.remove("sel");
-    selected=selected.filter(x=>x!==r);
-    return;
+    d.classList.remove("sel");selected=selected.filter(x=>x!==r);return;
    }
    if(selected.length>=killer.value)return;
    d.classList.add("sel");selected.push(r);
@@ -117,23 +155,21 @@ function drawRooms(){
 /* ================= BOT PHỤ 1 ================= */
 function botPhuPick(main){
  let c=ROOMS.filter(r=>r!==main);
- let p=c[Math.floor(Math.random()*c.length)];
- let h=roomHistory[p];
+ let pick=c[Math.floor(Math.random()*c.length)];
+ let h=roomHistory[pick];
  let trust=60+(h.win-h.lose)*2-h.loseStreak*8;
- return {room:p,trust:Math.max(25,Math.min(85,trust)).toFixed(1)};
+ trust=Math.max(25,Math.min(84.32,trust));
+ return {room:pick,trust:trust.toFixed(1)};
 }
 
-/* ================= BOT PHỤ 2 – PHƯƠNG ÁN 1 ================= */
+/* ================= BOT PHỤ 2 (ĐÁNH GIÁ RỦI RO) ================= */
 function botPhu2(room){
  let h=roomHistory[room];
  let score=100-h.loseStreak*20-h.lose*2+h.win*1.5;
  if(KEY_TYPE==="VIP") score+=10;
-
- let action="OK", lv="✅ AN TOÀN";
- if(score<35){ action="BLOCK"; lv="🚫 CẤM VÀO"; }
- else if(score<60){ action="LOW"; lv="⚠️ GIẢM CẦU"; }
-
- return {score:score.toFixed(1),lv,action};
+ score=Math.max(0,Math.min(100,score));
+ let lv=score<40?"🚫 NGUY HIỂM":score<65?"⚠️ CÂN NHẮC":"✅ AN TOÀN";
+ return {score:score.toFixed(1),lv};
 }
 
 /* ================= ANALYZE ================= */
@@ -146,7 +182,6 @@ function analyze(){
 
  let rate=Math.round(data.win/(data.win+data.lose)*100||0);
 
- /* SAFE MODE CHUẨN 4.6 */
  if(data.loseStreak>=4 || (data.winStreak>=5 && rate>80)){
   betSuggest.innerText="⛔ SAFE MODE – BOT NGHỈ";
   return;
@@ -155,17 +190,13 @@ function analyze(){
  do{
   botPick=ROOMS[Math.floor(Math.random()*ROOMS.length)];
  }while(botPick===data.lastBot);
+
  data.lastBot=botPick;
 
  let sub=botPhuPick(botPick);
  let p2=botPhu2(botPick);
 
- let bet="🟡 10%";
- if(rate<40) bet="🟢 5%";
- else if(rate>70) bet="🔴 30%";
-
- if(p2.action==="BLOCK") bet="🚫 KHÔNG VÀO";
- if(p2.action==="LOW") bet="🟡 GIẢM CẦU";
+ let bet=rate<40?"🟢 5%":rate<70?"🟡 10%":"🔴 30%";
 
  botMain.innerText=`BOT CHÍNH: ${botPick} (${rate}%)`;
  botSub.innerText=`BOT PHỤ NÉ: ${sub.room} (${sub.trust}%)`;
@@ -175,47 +206,68 @@ function analyze(){
  stats.innerHTML=
  `🆔 ${getDeviceId()}<br>
  🔑 ${KEY_TYPE} | ⏳ ${new Date(KEY_EXPIRE).toLocaleString()}<br>
- 🎯 ${data.rounds.length} ván | Win ${data.win} / Lose ${data.lose}`;
+ 🎯 Ván: ${data.rounds.length}<br>
+ Win: ${data.win} | Lose: ${data.lose}<br>
+ Chuỗi win: ${data.winStreak} | Chuỗi thua: ${data.loseStreak}`;
+
  drawChart();
 }
 
-/* ================= SAVE ================= */
+/* ================= SAVE ROUND ================= */
 function saveRound(){
+ if(Date.now()-data.last<5000)return alert("Chống spam");
+ if(selected.length!=killer.value)return;
+
  let result="WIN";
- if(selected.includes(botPick)){
-  data.lose++;data.loseStreak++;data.winStreak=0;result="LOSE";
- }else{
-  data.win++;data.winStreak++;data.loseStreak=0;
+ if(data.rounds.length>=3){
+  if(selected.includes(botPick)){
+   data.lose++;data.loseStreak++;data.winStreak=0;result="LOSE";
+  }else{
+   data.win++;data.winStreak++;data.loseStreak=0;
+  }
  }
+
  data.rounds.push([...selected]);
- data.log.push(`${result} | ${botPick}`);
+ data.last=Date.now();
+ data.log.push(`${result} | Bot: ${botPick} | Giết: ${selected.join(", ")}`);
  if(data.log.length>6)data.log.shift();
+
  selected.forEach(r=>{
   result==="WIN"?roomHistory[r].win++:roomHistory[r].lose++;
  });
+
  localStorage.setItem("gacon46",JSON.stringify(data));
  localStorage.setItem("roomHistory",JSON.stringify(roomHistory));
- logBox.innerHTML="<b>📜 NHẬT KÝ</b><br>"+data.log.join("<br>");
+
+ logBox.innerHTML="<b>📜 NHẬT KÝ BOT</b><br>"+data.log.join("<br>");
  drawRooms(); analyze();
 }
 
 /* ================= CHART ================= */
 function drawChart(){
- let c=chart.getContext("2d");
- c.clearRect(0,0,360,180);
- let cnt={};ROOMS.forEach(r=>cnt[r]=0);
- data.rounds.flat().forEach(r=>cnt[r]++);
- let max=Math.max(...Object.values(cnt),1);
+ let ctx=chart.getContext("2d");
+ ctx.clearRect(0,0,360,180);
+ let count={};ROOMS.forEach(r=>count[r]=0);
+ data.rounds.flat().forEach(r=>count[r]++);
+ let max=Math.max(...Object.values(count),1);
+
  ROOMS.forEach((r,i)=>{
-  let h=(cnt[r]/max)*120;
-  c.fillRect(20+i*65,160-h,40,h);
+  let h=(count[r]/max)*120;
+  let pct=Math.round(count[r]/data.rounds.length*100||0);
+  ctx.fillStyle="#00ff66";
+  ctx.fillRect(20+i*65,160-h,40,h);
+  ctx.fillText(pct+"%",25+i*65,150-h);
+  ctx.fillText(r[0],35+i*65,170);
  });
 }
 
 /* ================= RESET ================= */
-function resetBot(){
- localStorage.removeItem("gacon46");
- localStorage.removeItem("roomHistory");
+function openReset(){resetModal.style.display="flex"}
+function closeReset(){resetModal.style.display="none"}
+function confirmReset(){
+ const id=getDeviceId();
+ localStorage.clear();
+ localStorage.setItem("device_id",id);
  location.reload();
 }
 </script>
